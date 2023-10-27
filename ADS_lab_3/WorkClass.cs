@@ -86,7 +86,7 @@ namespace ADS_lab_3
 
                 firstChoiceResult = int.TryParse(Console.ReadLine(), out choice);
 
-                if (firstChoiceResult == false)
+                if (!firstChoiceResult)
                 {
                     Console.WriteLine("You entered not an integer number!");
                 }
@@ -106,13 +106,12 @@ namespace ADS_lab_3
         {
             bool varianChoiceResult = false;
             bool isNotExit = true;
-            int variant = 0;
-
+            int variant;
             do
             {
                 varianChoiceResult = int.TryParse(Console.ReadLine(), out variant);
 
-                if (varianChoiceResult == false)
+                if (!varianChoiceResult)
                 {
                     Console.WriteLine("You entered not an integer number!");
                 }
@@ -143,7 +142,7 @@ namespace ADS_lab_3
 
                 secondChoiceResult = int.TryParse(Console.ReadLine(), out choice);
 
-                if (secondChoiceResult == false)
+                if (!secondChoiceResult)
                 {
                     Console.WriteLine("You entered not an integer number!");
                 }
@@ -177,7 +176,6 @@ namespace ADS_lab_3
 
             RC5Algorrithm algorrithm = new RC5Algorrithm(wArray[variant], rArray[variant], key);
 
-            //string inputTextString = "The sun was setting over the horizon, casting a warm orange glow across the sky. Birds were chirping in the trees, and a gentle breeze rustled the leaves. It was a perfect evening for a leisurely walk in the park.";
             string inputTextString = "The sun was sett";
 
             byte[] inputText = Encoding.UTF8.GetBytes(inputTextString.Substring(0, wArray[variant] / 4));
