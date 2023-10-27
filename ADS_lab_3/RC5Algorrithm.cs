@@ -9,200 +9,442 @@ namespace ADS_lab_3
     public class RC5Algorrithm
     {
         // Довжина слова
-        const int W = 64;
+        private readonly int W;
 
         // Кількість раундів
-        const int R = 16;
+        private readonly int R;
 
-        const UInt64 PW = 0xB7E151628AED2A6B;        // 64-бітна константа
-        const UInt64 QW = 0x9E3779B97F4A7C15;        // 64-бітна константа
+        // Довжина ключа
+        private readonly int B;
 
-        UInt64[] L;                                  // масив слів для ключа користувача
-        UInt64[] S;                                  // таблица розширених ключів
-        int t;                                       // розмір таблиці
-        int b;                                       // довжина ключа в байтах
+        //64-бітні константи
+        const ulong PW_64 = 0xB7E151628AED2A6B;
+        const ulong QW_64 = 0x9E3779B97F4A7C15;
 
-        public RC5Algorrithm(byte[] key)
+        //32-бітні константи
+        const uint PW_32 = 0xB7E15163;
+        const uint QW_32 = 0x9E3779B9;
+
+        //16-бітні константи
+        const ushort PW_16 = 0xB7E1;
+        const ushort QW_16 = 0x9E37;
+
+        ulong[] S_long;
+        ushort[] S_short;
+        
+        public RC5Algorrithm(int w, int r, byte[] b)
         {
-            /*
-             *  Перед непосредственно шифрованием или расшифровкой данных выполняется процедура расширения ключа.
-             *  Процедура генерации ключа состоит из четырех этапов:
-             *      1. Генерация констант
-             *      2. Разбиение ключа на слова
-             *      3. Построение таблицы расширенных ключей
-             *      4. Перемешивание
-             */
+            W = w;
+            R = r;
+            B = b.Length;
 
-            // основные переменные
-            UInt64 x, y;
-            int i, j, n;
+            if (w != 16)
+            {
+                S_long = CreateSubkyes(b);
+            }
+            else
+            {
+                S_short = CreateSubkyesShort(b);
+            }
+        }
 
-            /*
-             * Этап 1. Генерация констант
-             * Для заданного параметра W генерируются две псевдослучайные величины,
-             * используя две математические константы: e (экспонента) и f (Golden ratio).
-             * Qw = Odd((e - 2) * 2^W;
-             * Pw = Odd((f - 1) * 2^W;
-             * где Odd() - это округление до ближайшего нечетного целого.
-             *
-             * Для оптимизации алгоритмы эти 2 величины определены заранее (см. константы выше).
-             */
-
-            /*
-             * Этап 2. Разбиение ключа на слова
-             * На этом этапе происходит копирование ключа K[0]..K[255] в массив слов L[0]..L[c-1], где
-             * c = b/u, а u = W/8. Если b не кратен W/8, то L[i] дополняется нулевыми битами до ближайшего
-             * большего размера c, при котором длина ключа b будет кратна W/8.
-             */
+        private ulong[] CreateSubkyes(byte[] key)
+        {
+            // Этап 1. Розбивання ключа на слова
 
             // кількість байтів у слові
             int u = W / 8;
 
-            b = key.Length;
+            int keyLength = key.Length;
 
             // розмір масива слів L
-            int c = b % u > 0 ? b / u + 1 : b / u;
-            L = new UInt64[c];
+            int c = keyLength / u;
+            ulong[] L = new ulong[c];
 
-            for (i = b - 1; i >= 0; i--)
+
+            for (int i = keyLength - 1; i >= 0; i--)
             {
                 L[i / u] = CyclicShiftLeft(L[i / u], 8) + key[i];
             }
 
-            /* Этап 3. Построение таблицы расширенных ключей
-             * На этом этапе происходит построение таблицы расширенных ключей S[0]..S[2(R + 1)],
-             * которая выполняется следующим образом:
-             */
 
-            t = 2 * (R + 1);
-            S = new UInt64[t];
-            S[0] = PW;
-            for (i = 1; i < t; i++)
+            // Етап 2. Ініціалізація масиву S (підключів)
+
+            ulong[] subkeysArray = new ulong[2 * R + 2];
+            if (W == 64)
             {
-                S[i] = S[i - 1] + QW;
+                subkeysArray[0] = PW_64;
+            }
+            else if (W == 32)
+            {
+                subkeysArray[0] = PW_32;
+            }
+            else
+            {
+                subkeysArray[0] = PW_16;
             }
 
-            /* Этап 4. Перемешивание
-             * Циклически выполняются следующие действия:
-             */
-
-            x = y = 0;
-            i = j = 0;
-            n = 3 * Math.Max(t, c);
-
-            for (int k = 0; k < n; k++)
+            for (int i = 1; i < 2 * R + 2; i++)
             {
-                x = S[i] = CyclicShiftLeft((S[i] + x + y), 3);
-                y = L[j] = CyclicShiftLeft((L[j] + x + y), (int)(x + y));
-                i = (i + 1) % t;
-                j = (j + 1) % c;
+                if (W == 64)
+                {
+                    subkeysArray[i] = subkeysArray[i - 1] + QW_64;
+                }
+                else if (W == 32)
+                {
+                    subkeysArray[i] = (subkeysArray[i - 1] + QW_32);
+                }
+                else
+                {
+                    subkeysArray[i] = (subkeysArray[i - 1] + QW_16);
+                }
             }
+
+            // Етап 3. Змішування ініціалізованого масиву S з масивом ключів L
+
+            int ii = 0, jj = 0;
+            ulong a = 0, b = 0;
+            int t = Math.Max(c, (2 * R) + 2);
+
+            for (int s = 0; s < 3 * t; s++)
+            {
+                subkeysArray[ii] = CyclicShiftLeft((subkeysArray[ii] + a + b), 3);
+                a = subkeysArray[ii];
+                L[jj] = CyclicShiftLeft((L[jj] + a + b), (int)(a + b));
+                b = L[jj];
+                ii = (ii + 1) % (2 * R + 2);
+                jj = (jj + 1) % c;
+            }
+
+            return subkeysArray;
         }
 
-        /// <summary>
-        /// Циклический сдвиг битов слова влево
-        /// </summary>
-        /// <param name="a">машинное слово: 64 бита</param>
-        /// <param name="offset">смещение</param>
-        /// <returns>машинное слово: 64 бита</returns>
-        private UInt64 CyclicShiftLeft(UInt64 a, int offset)
+        private ushort[] CreateSubkyesShort(byte[] key)
+        {
+            // Этап 1. Розбивання ключа на слова
+
+            // кількість байтів у слові
+            int u = W / 8;
+
+            int keyLength = key.Length;
+
+            // розмір масива слів L
+            int c = keyLength / u;
+            ushort[] L = new ushort[c];
+
+
+            for (int i = keyLength - 1; i >= 0; i--)
+            {
+                L[i / u] = (ushort)(CyclicShiftLeft(L[i / u], 8) + key[i]);
+            }
+
+
+            // Етап 2. Ініціалізація масиву S (підключів)
+
+            ushort[] subkeysArray = new ushort[2 * R + 2];
+            subkeysArray[0] = PW_16;
+
+
+            for (int i = 1; i < 2 * R + 2; i++)
+            {
+                subkeysArray[i] = (ushort)(subkeysArray[i - 1] + QW_16);
+            }
+
+            // Етап 3. Змішування ініціалізованого масиву S з масивом ключів L
+
+            int ii = 0, jj = 0;
+            ushort a = 0, b = 0;
+            int t = Math.Max(c, (2 * R) + 2);
+
+            for (int s = 0; s < 3 * t; s++)
+            {
+                subkeysArray[ii] = CyclicShiftLeft((ushort)(subkeysArray[ii] + a + b), 3);
+                a = subkeysArray[ii];
+                L[jj] = CyclicShiftLeft((ushort)(L[jj] + a + b), (a + b));
+                b = L[jj];
+                ii = (ii + 1) % (2 * R + 2);
+                jj = (jj + 1) % c;
+            }
+
+            return subkeysArray;
+        }
+
+        //Циклічний зсув вліво
+        private ulong CyclicShiftLeft(ulong a, int offset)
         {
             return (a << offset | a >> (W - offset));
         }
-
-        /// <summary>
-        /// Циклический сдвиг битов слова вправо
-        /// </summary>
-        /// <param name="a">машинное слово: 64 бита</param>
-        /// <param name="offset">смещение</param>
-        /// <returns>машинное слово: 64 бита</returns>
-        private UInt64 ROR(UInt64 a, int offset)
+        private uint CyclicShiftLeft(uint a, int offset)
         {
-            UInt64 r1, r2;
-            r1 = a >> offset;
-            r2 = a << (W - offset);
-            return (r1 | r2);
-
+            return ((uint)(a << offset | a >> (W - offset)));
         }
+        private ushort CyclicShiftLeft(ushort x, int y) => (ushort)((x << (y % W)) | (x >> (W - (y % W))));
+        private ushort CyclicShiftRight(ushort x, int y) => (ushort)((x >> (y % W)) | (x << (W - (y % W))));
+        //private ushort CyclicShiftLeft(ushort a, int offset)
+        //{
+        //    return ((ushort)(a << offset | a >> (W - offset)));
+        //}
 
-        /// <summary>
-        /// Свертка слова (64 бит) по 8-ми байтам
-        /// </summary>
-        /// <param name="b">массив байтов</param>
-        /// <param name="p">позиция</param>
-        /// <returns></returns>
-        private static UInt64 BytesToUInt64(byte[] b, int p)
+        //Циклічний зсув вправо
+        private ulong CyclicShiftRight(ulong a, int offset)
         {
-            UInt64 r = 0;
-            for (int i = p + 7; i > p; i--)
+            return (a >> offset | a << (W - offset));
+        }
+        private uint CyclicShiftRight(uint a, int offset)
+        {
+            return (a >> offset | a << (W - offset));
+        }
+        //private ushort CyclicShiftRight(ushort a, int offset)
+        //{
+        //    return ((ushort)(a >> offset | a << (W - offset)));
+        //}
+
+        // Перетворення вхідних даних на беззнакову змінну
+        private ulong BytesToUlong(byte[] b, int pos)
+        {
+            ulong r = 0;
+            for (int i = pos + (W / 8 - 1); i > pos; i--)
             {
-                r |= (UInt64)b[i];
+                r |= (ulong)b[i];
                 r <<= 8;
             }
-            r |= (UInt64)b[p];
+            r |= (ulong)b[pos];
+            return r;
+        }
+        private uint BytesToUint(byte[] b, int pos)
+        {
+            uint r = 0;
+            for (int i = pos + (W / 8 - 1); i > pos; i--)
+            {
+                r |= (uint)b[i];
+                r <<= 8;
+            }
+            r |= (uint)b[pos];
+            return r;
+        }
+        private ushort BytesToUshort(byte[] b, int pos)
+        {
+            ushort r = 0;
+            for (int i = pos + 1; i > pos; i--)
+            {
+                r |= (ushort)b[i];
+                r <<= 8;
+            }
+            r |= (ushort)b[pos];
             return r;
         }
 
-        /// <summary>
-        /// Развертка слова (64 бит) по 8-ми байтам
-        /// </summary>
-        /// <param name="a">64-битное слово</param>
-        /// <param name="b">массив байтов</param>
-        /// <param name="p">позиция</param>
-        private static void UInt64ToBytes(UInt64 a, byte[] b, int p)
+        // Перетворення беззнакових змін в послідовність байтів
+        private void UlongToBytes(ulong a, byte[] b, int p)
         {
-            for (int i = 0; i < 7; i++)
+            b[p] = (byte)(a & 0xFF);
+            for (int i = 1; i < W / 8; i++)
             {
-                b[p + i] = (byte)(a & 0xFF);
                 a >>= 8;
+                b[p + i] = (byte)(a & 0xFF);
             }
-            b[p + 7] = (byte)(a & 0xFF);
+        }
+        private void UintToBytes(uint a, byte[] b, int p)
+        {
+            b[p] = (byte)(a & 0xFF);
+            for (int i = 1; i < W / 8; i++)
+            {
+                a >>= 8;
+                b[p + i] = (byte)(a & 0xFF);
+            }
+        }
+        private void UshortToBytes(ushort a, byte[] b, int p)
+        {
+            b[p] = (byte)(a & 0xFF);
+            for (int i = 1; i < 2; i++)
+            {
+                a >>= 8;
+                b[p + i] = (byte)(a & 0xFF);
+            }
         }
 
-        /// <summary>
-        /// Операция шифрования
-        /// </summary>
-        /// <param name="inBuf">входной буфер для шифруемых данных (64 бита)</param>
-        /// <param name="outBuf">выходной буфер (64 бита)</param>
-        public void Cipher(byte[] inBuf, byte[] outBuf)
+        // Шифрування
+        public void Encryption(byte[] inBuf, byte[] outBuf)
         {
-            UInt64 a = BytesToUInt64(inBuf, 0);
-            UInt64 b = BytesToUInt64(inBuf, 8);
-
-            a = a + S[0];
-            b = b + S[1];
-
-            for (int i = 1; i < R + 1; i++)
+            if (W == 64)
             {
-                a = CyclicShiftLeft((a ^ b), (int)b) + S[2 * i];
-                b = CyclicShiftLeft((b ^ a), (int)a) + S[2 * i + 1];
-            }
+                ulong a = BytesToUlong(inBuf, 0);
+                ulong b = BytesToUlong(inBuf, 8);
 
-            UInt64ToBytes(a, outBuf, 0);
-            UInt64ToBytes(b, outBuf, 8);
+                a = a + S_long[0];
+                b = b + S_long[1];
+
+                for (int i = 1; i < R + 1; i++)
+                {
+                    a = CyclicShiftLeft((a ^ b), (int)b) + S_long[2 * i];
+                    b = CyclicShiftLeft((b ^ a), (int)a) + S_long[2 * i + 1];
+                }
+
+                UlongToBytes(a, outBuf, 0);
+                UlongToBytes(b, outBuf, 8);
+            } else if (W == 32)
+            {
+                uint a = BytesToUint(inBuf, 0);
+                uint b = BytesToUint(inBuf, 4);
+
+                a = a + (uint)S_long[0];
+                b = b + (uint)S_long[1];
+
+                for (int i = 1; i < R + 1; i++)
+                {
+                    a = (uint)(CyclicShiftLeft((a ^ b), (int)b) + S_long[2 * i]);
+                    b = (uint)(CyclicShiftLeft((b ^ a), (int)a) + S_long[2 * i + 1]);
+                }
+
+                UintToBytes(a, outBuf, 0);
+                UintToBytes(b, outBuf, 4);
+            }
+            else
+            {
+                ushort a = BytesToUshort(inBuf, 0);
+                ushort b = BytesToUshort(inBuf, 2);
+
+
+                a = (ushort)(a + S_short[0]);
+                b = (ushort)(b + S_short[1]);
+
+                //ushort tmp_a = (ushort)(a ^ b);
+                //Console.WriteLine($"Після XOR {(ushort)tmp_a}");
+                ////tmp_a = (ushort)tmp_a;
+
+                //tmp_a = CyclicShiftLeft(tmp_a, (int)b);
+                //Console.WriteLine($"Після зсуву вправо {(ushort)tmp_a}");
+                ////tmp_a = (ushort)tmp_a;
+
+                //tmp_a = (ushort)(tmp_a + S_short[2]);
+                //Console.WriteLine($"Після додавання {(ushort)tmp_a}");
+                ////tmp_a = (ushort)tmp_a;
+
+                //ushort tmp_b = (ushort)(b ^ tmp_a);
+                //Console.WriteLine($"Після XOR {(ushort)tmp_b}");
+                ////tmp_b = (ushort)tmp_b;
+
+                //tmp_b = CyclicShiftLeft(tmp_b, (int)tmp_a);
+                //Console.WriteLine($"Після зсуву вправо {(ushort)tmp_b}");
+                ////tmp_b = (ushort)tmp_b;
+
+                //tmp_b = (ushort)(tmp_b + S_short[3]);
+                //Console.WriteLine($"Після додавання {(ushort)tmp_b}");
+                ////tmp_b = (ushort)tmp_b;
+
+                for (int i = 1; i < R + 1; i++)
+                {
+                    //ushort tmp_a = (ushort)(a ^ b);
+                    //Console.WriteLine($"Після XOR {(ushort)tmp_a}");
+                    ////tmp_a = (ushort)tmp_a;
+
+                    //tmp_a = CyclicShiftLeft(tmp_a, (int)b);
+                    //Console.WriteLine($"Після зсуву вправо {(ushort)tmp_a}");
+
+                    //tmp_a = (ushort)(tmp_a + S_short[2]);
+                    //Console.WriteLine($"Після додавання {(ushort)tmp_a}");
+
+                    //ushort tmp_b = (ushort)(b ^ tmp_a);
+                    //Console.WriteLine($"Після XOR {(ushort)tmp_b}");
+
+                    //tmp_b = CyclicShiftLeft(tmp_b, (int)tmp_a);
+                    //Console.WriteLine($"Після зсуву вправо {(ushort)tmp_b}");
+
+                    //tmp_b = (ushort)(tmp_b + S_short[3]);
+                    //Console.WriteLine($"Після додавання {(ushort)tmp_b}");
+                    a = (ushort)(CyclicShiftLeft((ushort)(a ^ b), (int)b) + S_short[2 * i]);
+
+                    b = (ushort)(CyclicShiftLeft((ushort)(b ^ a), (int)a) + S_short[2 * i + 1]);
+                }
+
+                UshortToBytes((ushort)a, outBuf, 0);
+                UshortToBytes((ushort)b, outBuf, 2);
+            }
         }
 
-        /// <summary>
-        /// Операция расшифрования
-        /// </summary>
-        /// <param name="inBuf">входной буфер для шифруемых данных (64 бита)</param>
-        /// <param name="outBuf">выходной буфер (64 бита)</param>
-        public void Decipher(byte[] inBuf, byte[] outBuf)
+        // Розшифрування
+        public void Dencryption(byte[] inBuf, byte[] outBuf)
         {
-            UInt64 a = BytesToUInt64(inBuf, 0);
-            UInt64 b = BytesToUInt64(inBuf, 8);
-
-            for (int i = R; i > 0; i--)
+            if (W == 64)
             {
-                b = ROR((b - S[2 * i + 1]), (int)a) ^ a;
-                a = ROR((a - S[2 * i]), (int)b) ^ b;
+                ulong a = BytesToUlong(inBuf, 0);
+                ulong b = BytesToUlong(inBuf, W / 8);
+
+                for (int i = R; i > 0; i--)
+                {
+                    b = CyclicShiftRight((b - S_long[2 * i + 1]), (int)a) ^ a;
+                    a = CyclicShiftRight((a - S_long[2 * i]), (int)b) ^ b;
+                }
+
+                b = b - S_long[1];
+                a = a - S_long[0];
+
+                UlongToBytes(a, outBuf, 0);
+                UlongToBytes(b, outBuf, W / 8);
             }
+            else if (W == 32)
+            {
+                uint a = BytesToUint(inBuf, 0);
+                uint b = BytesToUint(inBuf, 4);
 
-            b = b - S[1];
-            a = a - S[0];
+                for (int i = R; i > 0; i--)
+                {
+                    b = (uint)(CyclicShiftRight((uint)(b - S_long[2 * i + 1]), (int)a) ^ a);
+                    a = (uint)(CyclicShiftRight((uint)(a - S_long[2 * i]), (int)b) ^ b);
+                }
 
-            UInt64ToBytes(a, outBuf, 0);
-            UInt64ToBytes(b, outBuf, 8);
+                b = b - (uint)S_long[1];
+                a = a - (uint)S_long[0];
+
+                UintToBytes(a, outBuf, 0);
+                UintToBytes(b, outBuf, 4);
+            }
+            else
+            {
+                ushort a = BytesToUshort(inBuf, 0);
+                ushort b = BytesToUshort(inBuf, 2);
+
+                //Console.WriteLine($"Initial B: {b}");
+
+                //ushort tmp_b = (ushort)(b - S_short[3]);
+                //Console.WriteLine($"Після віднімання {(ushort)tmp_b}");
+                ////tmp_b = (ushort)tmp_b;
+
+                //tmp_b = CyclicShiftRight(tmp_b, (int)a);
+                //Console.WriteLine($"Після зсуву вправо {(ushort)tmp_b}");
+                ////tmp_b = (ushort)tmp_b;
+
+                //tmp_b = (ushort)(tmp_b ^ a);
+                //Console.WriteLine($"Після XOR {(ushort)tmp_b}");
+                ////tmp_b = (ushort)tmp_b;
+
+                //Console.WriteLine($"Initial a {a}");
+
+                //ushort tmp_a = (ushort)(a - S_short[2]);
+                //Console.WriteLine($"Після віднімання {(ushort)tmp_a}");
+                ////tmp_a = (ushort)tmp_a;
+
+                //tmp_a = CyclicShiftRight(tmp_a, (int)tmp_b);
+                //Console.WriteLine($"Після зсуву вправо {(ushort)tmp_a}");
+                ////tmp_a = (ushort)tmp_a;
+
+                //tmp_a = (ushort)(tmp_a ^ tmp_b);
+                //Console.WriteLine($"Після XOR {(ushort)tmp_a}");
+                ////tmp_a = (ushort)tmp_a;
+
+                for (int i = R; i > 0; i--)
+                {
+                    b = (ushort)(CyclicShiftRight((ushort)(b - S_short[2 * i + 1]), (int)a) ^ a);
+
+                    a = (ushort)(CyclicShiftRight((ushort)(a - S_short[2 * i]), (int)b) ^ b);
+                }
+
+                b = (ushort)(b - S_short[1]);
+                a = (ushort)(a - S_short[0]);
+
+                UshortToBytes(a, outBuf, 0);
+                UshortToBytes(b, outBuf, 2);
+            }
         }
     }
 }

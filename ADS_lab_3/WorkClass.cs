@@ -24,53 +24,53 @@ namespace ADS_lab_3
 
             if (initialChoice == 1)
             {
-                Console.WriteLine("Available variants:\n");
+                Console.WriteLine("\n\nAvailable variants:\n");
                 ShowAvailableVariants();
                 Console.WriteLine("\nChoose variant:");
 
                 variant = VariantMenu();
+                variant = variant - 1;
             }
             else
             {
                 Environment.Exit(0);
             }
 
-            int secondChoice = SecondMenu();
-
-            if (secondChoice == 1)
+            do
             {
-                Console.WriteLine("Enter password key");
-                string password = Console.ReadLine();
+                int secondChoice = SecondMenu();
 
-                Console.WriteLine("Enter file name");
-                string fileName = Console.ReadLine();
+                if (secondChoice == 1)
+                {
+                    Console.WriteLine("Enter password key");
+                    string password = Console.ReadLine();
+
+                    Console.WriteLine("Enter file name");
+                    string fileName = Console.ReadLine();
+
+                    EnctyptFile(password, fileName);
+
+                    Console.WriteLine("File was successful encrypted");
+                }
+                else if (secondChoice == 2)
+                {
+                    Console.WriteLine("Enter password key");
+                    string password = Console.ReadLine();
+
+                    Console.WriteLine("Enter file name");
+                    string fileName = Console.ReadLine();
 
 
+                    Console.WriteLine("File was successful decrypted");
+                }
+                else
+                {
+                    Environment.Exit(0);
+                }
 
-                Console.WriteLine("File was successful encrypted");
-            }
-            else if (secondChoice == 2)
-            {
-                Console.WriteLine("Enter password key");
-                string password = Console.ReadLine();
-
-                Console.WriteLine("Enter file name");
-                string fileName = Console.ReadLine();
-
-
-
-                Console.WriteLine("File was successful decrypted");
-            }
-            else
-            {
-                Environment.Exit(0);
-            }
-
-            Console.WriteLine("Enter password key");
-
-            Console.WriteLine("Enter file name");
-
-            Console.WriteLine("File was successful encrypted/decrypted");
+                Console.WriteLine("File was successful encrypted/decrypted\n\n\n");
+            } while (true);
+            
         }
         private int InitialMenu()
         {
@@ -175,25 +175,25 @@ namespace ADS_lab_3
         {
             byte[] key = KeyAccordingToVariant(password);
 
+            RC5Algorrithm algorrithm = new RC5Algorrithm(wArray[variant], rArray[variant], key);
 
-            RC5Algorrithm algorrithm = new RC5Algorrithm(key);
+            //string inputTextString = "The sun was setting over the horizon, casting a warm orange glow across the sky. Birds were chirping in the trees, and a gentle breeze rustled the leaves. It was a perfect evening for a leisurely walk in the park.";
+            string inputTextString = "The sun was sett";
 
-            string inputTextString = "The sun was setting over the horizon, casting a warm orange glow across the sky. Birds were chirping in the trees, and a gentle breeze rustled the leaves. It was a perfect evening for a leisurely walk in the park.";
-
-            byte[] inputText = Encoding.UTF8.GetBytes(inputTextString);
+            byte[] inputText = Encoding.UTF8.GetBytes(inputTextString.Substring(0, wArray[variant] / 4));
             byte[] cryptText = new byte[inputText.Length];
-            Console.WriteLine($"Initial text:\n{inputTextString}\n");
+            Console.WriteLine($"Initial text:\n\"{inputTextString.Substring(0, wArray[variant] / 4)}\"\n");
 
-            algorrithm.Cipher(inputText, cryptText);
+            algorrithm.Encryption(inputText, cryptText);
 
             string cryptTextString = DecryptUTF8Bytes(cryptText);
-            Console.WriteLine($"CryptoText:\n{cryptTextString}\n");
+            Console.WriteLine($"CryptoText:\n\"{cryptTextString}\"\n");
 
             byte[] decryptText = new byte[inputText.Length];
-            algorrithm.Decipher(cryptText, decryptText);
+            algorrithm.Dencryption(cryptText, decryptText);
 
             string decryptTextString = DecryptUTF8Bytes(decryptText);
-            Console.WriteLine($"DecryptoText:\n{decryptTextString}\n");
+            Console.WriteLine($"DecryptoText:\n\"{decryptTextString}\"\n");
         }
 
         private byte[] KeyAccordingToVariant(string password)
