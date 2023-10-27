@@ -194,82 +194,81 @@ namespace ADS_lab_3
         {
             return (a >> offset | a << (W - offset));
         }
-        //private ushort CyclicShiftRight(ushort a, int offset)
-        //{
-        //    return ((ushort)(a >> offset | a << (W - offset)));
-        //}
 
         // Перетворення вхідних даних на беззнакову змінну
-        private ulong BytesToUlong(byte[] b, int pos)
+        private ulong BytesToUlong(byte[] inputData, int position)
         {
-            ulong r = 0;
-            for (int i = pos + (W / 8 - 1); i > pos; i--)
+            ulong x = (ulong)(inputData[position] & 0xFF);
+            int offset = 8;
+            for (int i = 1; i < 8; i++)
             {
-                r |= (ulong)b[i];
-                r <<= 8;
+                x += (ulong)(inputData[position + i] & 0xFF) << offset;
+                offset += 8;
             }
-            r |= (ulong)b[pos];
-            return r;
-        }
-        private uint BytesToUint(byte[] b, int pos)
-        {
-            uint r = 0;
-            for (int i = pos + (W / 8 - 1); i > pos; i--)
-            {
-                r |= (uint)b[i];
-                r <<= 8;
-            }
-            r |= (uint)b[pos];
-            return r;
-        }
-        private ushort BytesToUshort(byte[] b, int pos)
-        {
-            ushort r = 0;
-            for (int i = pos + 1; i > pos; i--)
-            {
-                r |= (ushort)b[i];
-                r <<= 8;
-            }
-            r |= (ushort)b[pos];
-            return r;
-        }
 
-        // Перетворення беззнакових змін в послідовність байтів
-        private void UlongToBytes(ulong a, byte[] b, int p)
-        {
-            b[p] = (byte)(a & 0xFF);
-            for (int i = 1; i < W / 8; i++)
-            {
-                a >>= 8;
-                b[p + i] = (byte)(a & 0xFF);
-            }
+            return x;
         }
-        private void UintToBytes(uint a, byte[] b, int p)
+        private uint BytesToUint(byte[] inputData, int position)
         {
-            b[p] = (byte)(a & 0xFF);
-            for (int i = 1; i < W / 8; i++)
+            uint x = (uint)(inputData[position] & 0xFF);
+            int offset = 8;
+            for (int i = 1; i < 4; i++)
             {
-                a >>= 8;
-                b[p + i] = (byte)(a & 0xFF);
+                x += (uint)(inputData[position + i] & 0xFF) << offset;
+                offset += 8;
             }
+
+            return x;
         }
-        private void UshortToBytes(ushort a, byte[] b, int p)
+        private ushort BytesToUshort(byte[] inputData, int position)
         {
-            b[p] = (byte)(a & 0xFF);
+            ushort x = (ushort)(inputData[position] & 0xFF);
+            int offset = 8;
             for (int i = 1; i < 2; i++)
             {
-                a >>= 8;
-                b[p + i] = (byte)(a & 0xFF);
+                x += (ushort)((ushort)(inputData[position + i] & 0xFF) << offset);
+                offset += 8;
+            }
+
+            return x;
+        }
+
+        // Перетворення беззнакових змінних в масив байтів
+        private void UlongToBytes(ulong x, byte[] outputData, int position)
+        {
+            int offset = 0;
+            for (int i = 0; i < 8; i++)
+            {
+                outputData[i + position] = (byte)((x >> offset) & 0xFF);
+                offset += 8;
+            }
+        }
+        private void UintToBytes(uint x, byte[] outputData, int position)
+        {
+            int offset = 0;
+            for (int i = 0; i < 4; i++)
+            {
+                outputData[i + position] = (byte)((x >> offset) & 0xFF);
+                offset += 8;
+            }
+        }
+        private void UshortToBytes(ushort x, byte[] outputData, int position)
+        {
+            int offset = 0;
+            for (int i = 0; i < 2; i++)
+            {
+                outputData[i + position] = (byte)((x >> offset) & 0xFF);
+                offset += 8;
             }
         }
 
         // Шифрування
-        public void Encryption(byte[] inBuf, byte[] outBuf)
+        public void Encryption(byte[] inputData, byte[] outputData)
         {
             if (W == 64)
             {
-                ulong a = BytesToUlong(inBuf, 0);
-                ulong b = BytesToUlong(inBuf, 8);
+                ulong a = BytesToUlong(inputData, 0);
+                ulong b = BytesToUlong(inputData, 8);
 
                 a = a + S_long[0];
                 b = b + S_long[1];
@@ -280,12 +279,12 @@ namespace ADS_lab_3
                     b = CyclicShiftLeft((b ^ a), (int)a) + S_long[2 * i + 1];
                 }
 
-                UlongToBytes(a, outBuf, 0);
-                UlongToBytes(b, outBuf, 8);
+                UlongToBytes(a, outputData, 0);
+                UlongToBytes(b, outputData, 8);
             } else if (W == 32)
             {
-                uint a = BytesToUint(inBuf, 0);
-                uint b = BytesToUint(inBuf, 4);
+                uint a = BytesToUint(inputData, 0);
+                uint b = BytesToUint(inputData, 4);
 
                 a = a + (uint)S_long[0];
                 b = b + (uint)S_long[1];
@@ -296,79 +295,35 @@ namespace ADS_lab_3
                     b = (uint)(CyclicShiftLeft((b ^ a), (int)a) + S_long[2 * i + 1]);
                 }
 
-                UintToBytes(a, outBuf, 0);
-                UintToBytes(b, outBuf, 4);
+                UintToBytes(a, outputData, 0);
+                UintToBytes(b, outputData, 4);
             }
             else
             {
-                ushort a = BytesToUshort(inBuf, 0);
-                ushort b = BytesToUshort(inBuf, 2);
-
+                ushort a = BytesToUshort(inputData, 0);
+                ushort b = BytesToUshort(inputData, 2);
 
                 a = (ushort)(a + S_short[0]);
                 b = (ushort)(b + S_short[1]);
 
-                //ushort tmp_a = (ushort)(a ^ b);
-                //Console.WriteLine($"Після XOR {(ushort)tmp_a}");
-                ////tmp_a = (ushort)tmp_a;
-
-                //tmp_a = CyclicShiftLeft(tmp_a, (int)b);
-                //Console.WriteLine($"Після зсуву вправо {(ushort)tmp_a}");
-                ////tmp_a = (ushort)tmp_a;
-
-                //tmp_a = (ushort)(tmp_a + S_short[2]);
-                //Console.WriteLine($"Після додавання {(ushort)tmp_a}");
-                ////tmp_a = (ushort)tmp_a;
-
-                //ushort tmp_b = (ushort)(b ^ tmp_a);
-                //Console.WriteLine($"Після XOR {(ushort)tmp_b}");
-                ////tmp_b = (ushort)tmp_b;
-
-                //tmp_b = CyclicShiftLeft(tmp_b, (int)tmp_a);
-                //Console.WriteLine($"Після зсуву вправо {(ushort)tmp_b}");
-                ////tmp_b = (ushort)tmp_b;
-
-                //tmp_b = (ushort)(tmp_b + S_short[3]);
-                //Console.WriteLine($"Після додавання {(ushort)tmp_b}");
-                ////tmp_b = (ushort)tmp_b;
-
                 for (int i = 1; i < R + 1; i++)
                 {
-                    //ushort tmp_a = (ushort)(a ^ b);
-                    //Console.WriteLine($"Після XOR {(ushort)tmp_a}");
-                    ////tmp_a = (ushort)tmp_a;
-
-                    //tmp_a = CyclicShiftLeft(tmp_a, (int)b);
-                    //Console.WriteLine($"Після зсуву вправо {(ushort)tmp_a}");
-
-                    //tmp_a = (ushort)(tmp_a + S_short[2]);
-                    //Console.WriteLine($"Після додавання {(ushort)tmp_a}");
-
-                    //ushort tmp_b = (ushort)(b ^ tmp_a);
-                    //Console.WriteLine($"Після XOR {(ushort)tmp_b}");
-
-                    //tmp_b = CyclicShiftLeft(tmp_b, (int)tmp_a);
-                    //Console.WriteLine($"Після зсуву вправо {(ushort)tmp_b}");
-
-                    //tmp_b = (ushort)(tmp_b + S_short[3]);
-                    //Console.WriteLine($"Після додавання {(ushort)tmp_b}");
                     a = (ushort)(CyclicShiftLeft((ushort)(a ^ b), (int)b) + S_short[2 * i]);
-
                     b = (ushort)(CyclicShiftLeft((ushort)(b ^ a), (int)a) + S_short[2 * i + 1]);
                 }
 
-                UshortToBytes((ushort)a, outBuf, 0);
-                UshortToBytes((ushort)b, outBuf, 2);
+                UshortToBytes(a, outputData, 0);
+                UshortToBytes(b, outputData, 2);
             }
         }
 
         // Розшифрування
-        public void Dencryption(byte[] inBuf, byte[] outBuf)
+        public void Dencryption(byte[] inputData, byte[] outputData)
         {
             if (W == 64)
             {
-                ulong a = BytesToUlong(inBuf, 0);
-                ulong b = BytesToUlong(inBuf, W / 8);
+                ulong a = BytesToUlong(inputData, 0);
+                ulong b = BytesToUlong(inputData, 8);
 
                 for (int i = R; i > 0; i--)
                 {
@@ -379,13 +334,14 @@ namespace ADS_lab_3
                 b = b - S_long[1];
                 a = a - S_long[0];
 
-                UlongToBytes(a, outBuf, 0);
-                UlongToBytes(b, outBuf, W / 8);
+                UlongToBytes(a, outputData, 0);
+                UlongToBytes(b, outputData, 8);
             }
             else if (W == 32)
             {
-                uint a = BytesToUint(inBuf, 0);
-                uint b = BytesToUint(inBuf, 4);
+                // Переписати
+                uint a = BytesToUint(inputData, 0);
+                uint b = BytesToUint(inputData, 4);
 
                 for (int i = R; i > 0; i--)
                 {
@@ -393,44 +349,17 @@ namespace ADS_lab_3
                     a = (uint)(CyclicShiftRight((uint)(a - S_long[2 * i]), (int)b) ^ b);
                 }
 
-                b = b - (uint)S_long[1];
                 a = a - (uint)S_long[0];
+                b = b - (uint)S_long[1];
 
-                UintToBytes(a, outBuf, 0);
-                UintToBytes(b, outBuf, 4);
+                UintToBytes(a, outputData, 0);
+                UintToBytes(b, outputData, 4);
             }
             else
             {
-                ushort a = BytesToUshort(inBuf, 0);
-                ushort b = BytesToUshort(inBuf, 2);
-
-                //Console.WriteLine($"Initial B: {b}");
-
-                //ushort tmp_b = (ushort)(b - S_short[3]);
-                //Console.WriteLine($"Після віднімання {(ushort)tmp_b}");
-                ////tmp_b = (ushort)tmp_b;
-
-                //tmp_b = CyclicShiftRight(tmp_b, (int)a);
-                //Console.WriteLine($"Після зсуву вправо {(ushort)tmp_b}");
-                ////tmp_b = (ushort)tmp_b;
-
-                //tmp_b = (ushort)(tmp_b ^ a);
-                //Console.WriteLine($"Після XOR {(ushort)tmp_b}");
-                ////tmp_b = (ushort)tmp_b;
-
-                //Console.WriteLine($"Initial a {a}");
-
-                //ushort tmp_a = (ushort)(a - S_short[2]);
-                //Console.WriteLine($"Після віднімання {(ushort)tmp_a}");
-                ////tmp_a = (ushort)tmp_a;
-
-                //tmp_a = CyclicShiftRight(tmp_a, (int)tmp_b);
-                //Console.WriteLine($"Після зсуву вправо {(ushort)tmp_a}");
-                ////tmp_a = (ushort)tmp_a;
-
-                //tmp_a = (ushort)(tmp_a ^ tmp_b);
-                //Console.WriteLine($"Після XOR {(ushort)tmp_a}");
-                ////tmp_a = (ushort)tmp_a;
+                // Переписати
+                ushort a = BytesToUshort(inputData, 0);
+                ushort b = BytesToUshort(inputData, 2);
 
                 for (int i = R; i > 0; i--)
                 {
@@ -442,8 +371,15 @@ namespace ADS_lab_3
                 b = (ushort)(b - S_short[1]);
                 a = (ushort)(a - S_short[0]);
 
-                UshortToBytes(a, outBuf, 0);
-                UshortToBytes(b, outBuf, 2);
+                outputData[0] = (byte)(a & 0xFF);
+                outputData[1] = (byte)((a >> 8) & 0xFF);
+
+                outputData[2] = (byte)(b & 0xFF);
+                outputData[3] = (byte)((b >> 8) & 0xFF);
+
+
+                //UshortToBytes(a, outputData, 0);
+                //UshortToBytes(b, outputData, 2);
             }
         }
     }
