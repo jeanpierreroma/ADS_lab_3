@@ -20,6 +20,13 @@ namespace ADS_lab_1
             this.c = c;
             this.x_start = x_start;
         }
+        public LinearCongruentialGenerator()
+        {
+            m = (long)Math.Pow(2, 24) - 1;
+            a = (long)Math.Pow(11, 3);
+            c = 610;
+            x_start = 9;
+        }
         public IEnumerable<long> GenerateSequence(long length)
         {
             long xStart = x_start;

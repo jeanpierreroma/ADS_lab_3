@@ -1,6 +1,7 @@
 ﻿using ADS_lab_2;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -9,6 +10,11 @@ namespace ADS_lab_3
 {
     public class WorkClass
     {
+        private const string DefaultRoutePlainTextFile = "D:\\University\\7_term\\Application and data security\\Labs\\Labs\\Lab_3\\TestFolder\\PlainText\\";
+        private const string DefaultRouteCtyptedTextFile = "D:\\University\\7_term\\Application and data security\\Labs\\Labs\\Lab_3\\TestFolder\\CryptedText\\";
+        private const string DefaultRouteDecryptedTextFile = "D:\\University\\7_term\\Application and data security\\Labs\\Labs\\Lab_3\\TestFolder\\DecryptedText\\";
+
+
         private readonly int[] wArray = { 16, 32, 64, 16, 32, 64, 16, 32, 64, 16, 32, 64, 16, 32, 64, 16, 32, 64, 16, 32, 64, 16, 32, 64, 16 };
         private readonly int[] rArray = { 8, 12, 16, 20, 8, 12, 16, 20, 8, 12, 16, 20, 8, 12, 16, 20, 8, 12, 16, 20, 8, 12, 16, 20, 8 };
         private readonly int[] bArray = { 16, 16, 32, 16, 32, 8, 8, 16, 32, 16, 8, 16, 32, 32, 16, 8, 8, 16, 32, 32, 16, 8, 32, 8, 8 };
@@ -68,7 +74,6 @@ namespace ADS_lab_3
                     Environment.Exit(0);
                 }
 
-                Console.WriteLine("File was successful encrypted/decrypted\n\n\n");
             } while (true);
             
         }
@@ -174,24 +179,30 @@ namespace ADS_lab_3
         {
             byte[] key = KeyAccordingToVariant(password);
 
-            RC5Algorrithm algorrithm = new RC5Algorrithm(wArray[variant], rArray[variant], key);
+            // Зчитуємо дані з файлу
+            byte[] plainText = ReadFromFile(DefaultRoutePlainTextFile + fileName);
 
-            string inputTextString = "The sun was sett";
+            RC5CBCPas_mode rc5Mode = new RC5CBCPas_mode(wArray[variant], rArray[variant], key);
 
-            byte[] inputText = Encoding.UTF8.GetBytes(inputTextString.Substring(0, wArray[variant] / 4));
-            byte[] cryptText = new byte[inputText.Length];
-            Console.WriteLine($"Initial text:\n\"{inputTextString.Substring(0, wArray[variant] / 4)}\"\n");
+            rc5Mode.Encrypt(plainText, out byte[] cryptText);
 
-            algorrithm.Encryption(inputText, cryptText);
+            // Записуємо дані в файл
+            WriteIntoFile(DefaultRouteCtyptedTextFile + fileName, cryptText);
+        }
 
-            string cryptTextString = DecryptUTF8Bytes(cryptText);
-            Console.WriteLine($"CryptoText:\n\"{cryptTextString}\"\n");
+        private void DenctyptFile(string password, string fileName)
+        {
+            byte[] key = KeyAccordingToVariant(password);
 
-            byte[] decryptText = new byte[inputText.Length];
-            algorrithm.Dencryption(cryptText, decryptText);
+            // Зчитуємо дані з файлу
+            byte[] cryptedText = ReadFromFile(DefaultRouteCtyptedTextFile + fileName);
 
-            string decryptTextString = DecryptUTF8Bytes(decryptText);
-            Console.WriteLine($"DecryptoText:\n\"{decryptTextString}\"\n");
+            RC5CBCPas_mode rc5Mode = new RC5CBCPas_mode(wArray[variant], rArray[variant], key);
+
+            rc5Mode.Dencrypt(cryptedText, out byte[] decryptText);
+
+            // Записуємо дані в файл
+            WriteIntoFile(DefaultRouteDecryptedTextFile + fileName, decryptText);
         }
 
         private byte[] KeyAccordingToVariant(string password)
@@ -259,6 +270,19 @@ namespace ADS_lab_3
             return result;
         }
 
+        private byte[] ReadFromFile(string fileName)
+        {
+            // Написати виключення
+            var fileContent = File.ReadAllText(fileName);
+
+            return Encoding.UTF8.GetBytes(fileContent);
+        }
+
+        private void WriteIntoFile(string fileName, byte[] content)
+        {
+            string stringContent = DecryptUTF8Bytes(content);
+            File.WriteAllText(fileName, stringContent);
+        }
     }
 
 }

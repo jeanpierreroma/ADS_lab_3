@@ -48,6 +48,7 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RC5Algorrithm.cs" />
+    <Compile Include="RC5CBCPas_mode.cs" />
     <Compile Include="WorkClass.cs" />
   </ItemGroup>
   <ItemGroup>
