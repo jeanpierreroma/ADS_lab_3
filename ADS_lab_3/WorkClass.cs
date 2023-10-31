@@ -56,7 +56,7 @@ namespace ADS_lab_3
 
                     EnctyptFile(password, fileName);
 
-                    Console.WriteLine("File was successful encrypted");
+                    Console.WriteLine("\nFile was successful encrypted\n");
                 }
                 else if (secondChoice == 2)
                 {
@@ -66,8 +66,9 @@ namespace ADS_lab_3
                     Console.WriteLine("Enter file name");
                     string fileName = Console.ReadLine();
 
+                    DenctyptFile(password, fileName);
 
-                    Console.WriteLine("File was successful decrypted");
+                    Console.WriteLine("\nFile was successful decrypted\n");
                 }
                 else
                 {
@@ -180,29 +181,37 @@ namespace ADS_lab_3
             byte[] key = KeyAccordingToVariant(password);
 
             // Зчитуємо дані з файлу
-            byte[] plainText = ReadFromFile(DefaultRoutePlainTextFile + fileName);
+            var fileContent = File.ReadAllText(DefaultRoutePlainTextFile + fileName, Encoding.UTF8);
+
+            byte[] plainText = Encoding.UTF8.GetBytes(fileContent);
+
+            Console.WriteLine($"\nFile content (plain text):\n{fileContent}");
 
             RC5CBCPas_mode rc5Mode = new RC5CBCPas_mode(wArray[variant], rArray[variant], key);
 
             rc5Mode.Encrypt(plainText, out byte[] cryptText);
 
             // Записуємо дані в файл
-            WriteIntoFile(DefaultRouteCtyptedTextFile + fileName, cryptText);
+            File.WriteAllBytes(DefaultRouteCtyptedTextFile + fileName, cryptText);
+            //WriteIntoFile(DefaultRouteCtyptedTextFile + fileName, cryptText);
         }
 
         private void DenctyptFile(string password, string fileName)
         {
             byte[] key = KeyAccordingToVariant(password);
 
-            // Зчитуємо дані з файлу
-            byte[] cryptedText = ReadFromFile(DefaultRouteCtyptedTextFile + fileName);
+            //byte[] cryptedText = ReadFromFile(DefaultRouteCtyptedTextFile + fileName);
+
+            byte[] cryptedText = File.ReadAllBytes(DefaultRouteCtyptedTextFile + fileName);
 
             RC5CBCPas_mode rc5Mode = new RC5CBCPas_mode(wArray[variant], rArray[variant], key);
 
-            rc5Mode.Dencrypt(cryptedText, out byte[] decryptText);
+            rc5Mode.Decrypt(cryptedText, out byte[] plainText);
+
+            Console.WriteLine($"\nDecrypted text:\n{Encoding.UTF8.GetString(plainText)}");
 
             // Записуємо дані в файл
-            WriteIntoFile(DefaultRouteDecryptedTextFile + fileName, decryptText);
+            WriteIntoFile(DefaultRouteDecryptedTextFile + fileName, plainText);
         }
 
         private byte[] KeyAccordingToVariant(string password)
@@ -234,20 +243,6 @@ namespace ADS_lab_3
             return key;
         }
 
-        private string DecryptUTF8Bytes(byte[] encryptedBytes)
-        {
-            try
-            {
-                string decryptedText = Encoding.UTF8.GetString(encryptedBytes);
-                return decryptedText;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Помилка розшифровки: " + ex.Message);
-                return null;
-            }
-        }
-
         private byte[] GetArrayBytesFromMD5(uint[] md5Result)
         {
             byte[] resultBytes = new byte[md5Result.Length * 4]; // 4 байти в кожному uint
@@ -270,18 +265,11 @@ namespace ADS_lab_3
             return result;
         }
 
-        private byte[] ReadFromFile(string fileName)
-        {
-            // Написати виключення
-            var fileContent = File.ReadAllText(fileName);
-
-            return Encoding.UTF8.GetBytes(fileContent);
-        }
-
         private void WriteIntoFile(string fileName, byte[] content)
         {
-            string stringContent = DecryptUTF8Bytes(content);
-            File.WriteAllText(fileName, stringContent);
+            string fileContent = Encoding.UTF8.GetString(content);
+
+            File.WriteAllText(fileName, fileContent, Encoding.UTF8);
         }
     }
 

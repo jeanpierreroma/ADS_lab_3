@@ -20,7 +20,7 @@ namespace ADS_lab_3
             generator = new LinearCongruentialGenerator();
         }
 
-        public byte[] Encrypt(byte[] plainText, out byte[] cryptText)
+        public void Encrypt(byte[] plainText, out byte[] cryptText)
         {
             // Зробити доповнення (масив рандому на початку і вкінці заокруглення)
             var appendedText = AppendText(plainText);
@@ -61,21 +61,61 @@ namespace ADS_lab_3
 
                 Buffer.BlockCopy(output, 0, cryptText, (i + 1) * blockSize, blockSize);
             }
-
-            return cryptText;
         }
 
 
 
-        public void Decrypt(string cryptedText)
+        public void Decrypt(byte[] cryptedText, out byte[] plainText)
         {
+            byte[] decryptedText = new byte[cryptedText.Length];
+
+            // Перерший блок дешифрується ECB
+            byte[] inputData_randomArray = new byte[blockSize];
+            byte[] outputData_randomArray = new byte[blockSize];
+
+            Buffer.BlockCopy(cryptedText, 0, inputData_randomArray, 0, blockSize);
+
+            rc5.Dencryption(inputData_randomArray, outputData_randomArray);
+
+            Buffer.BlockCopy(outputData_randomArray, 0, decryptedText, 0, blockSize);
+
+            // Дешифрування в режимі CBC
+            int iterationCount = cryptedText.Length / blockSize - 1;
+
+            for (int i = 0; i < iterationCount; i++)
+            {
+                byte[] nextPlainBlock = new byte[blockSize];
+                Buffer.BlockCopy(cryptedText, (i + 1) * blockSize, nextPlainBlock, 0, blockSize);
+
+                byte[] output = new byte[blockSize];
+                rc5.Dencryption(nextPlainBlock, output);
+
+                byte[] previousBlock = new byte[blockSize];
+                Buffer.BlockCopy(cryptedText, i * blockSize, previousBlock, 0, blockSize);
+
+                // Операція XOR попереднього результату з поточних
+                byte[] currentBlock = new byte[blockSize];
+                for (int j = 0; j < currentBlock.Length; j++)
+                {
+                    currentBlock[j] = (byte)(previousBlock[j] ^ output[j]);
+                }
+
+                Buffer.BlockCopy(currentBlock, 0, decryptedText, (i + 1) * blockSize, blockSize);
+            }
+
+            // Вадалямо блок рандому і доповнення
+            int appendedLength = decryptedText[decryptedText.Length - 1];
+
+            plainText = new byte[decryptedText.Length - appendedLength - blockSize];
+
+            Buffer.BlockCopy(decryptedText, blockSize, plainText, 0, plainText.Length);
 
         }
 
         private byte[] AppendText(byte[] inputText)
         {
             int lengthRandomArray = blockSize;
-            int lenghtAppendedText = inputText.Length % blockSize == 0 ? blockSize : inputText.Length % blockSize;
+            int lenghtAppendedText = inputText.Length % blockSize == 0 ? blockSize : blockSize - (inputText.Length % blockSize);
 
             int lengthFullAppendedText = lengthRandomArray + inputText.Length + lenghtAppendedText;
             byte[] appendedText = new byte[lengthFullAppendedText];
